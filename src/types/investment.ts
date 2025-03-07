@@ -17,6 +17,10 @@ export interface StockHolding {
   currentPrice?: number;
   marketValue?: number;
   unrealizedGainLoss?: number;
+  isSold?: boolean;
+  sharesSold?: number;
+  salePricePerShare?: number;
+  dateSold?: Date;
 }
 
 export interface PortfolioState {

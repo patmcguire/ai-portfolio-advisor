@@ -20,6 +20,7 @@ const App: React.FC = () => {
     stocks: [],
     totalPortfolioValue: 0,
     totalUnrealizedGainLoss: 0,
+    totalRealizedGainLoss: 0,
   });
   const [editingStock, setEditingStock] = useState<StockHolding | null>(null);
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
@@ -154,6 +155,37 @@ const App: React.FC = () => {
     setEditingStock(null);
   };
 
+  const handleSellStock = (stockId: string, sharesSold: number, salePricePerShare: number, dateSold: Date) => {
+    setPortfolio(prev => {
+      const stockIndex = prev.stocks.findIndex(s => s.id === stockId);
+      if (stockIndex === -1) return prev;
+
+      const stock = prev.stocks[stockIndex];
+      const saleProceeds = sharesSold * salePricePerShare;
+      const remainingShares = stock.shares - sharesSold;
+
+      let updatedStocks = [...prev.stocks];
+      
+      if (remainingShares > 0) {
+        // Update existing stock with remaining shares
+        updatedStocks[stockIndex] = {
+          ...stock,
+          shares: remainingShares,
+          costBasis: (stock.costBasis / stock.shares) * remainingShares,
+        };
+      } else {
+        // Remove the stock if all shares are sold
+        updatedStocks = updatedStocks.filter(s => s.id !== stockId);
+      }
+
+      return {
+        ...prev,
+        stocks: updatedStocks,
+        remainingCash: prev.remainingCash + saleProceeds,
+      };
+    });
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -175,6 +207,7 @@ const App: React.FC = () => {
                 stocks={portfolio.stocks}
                 onDelete={handleDeleteStock}
                 onEdit={handleEditStock}
+                onSell={handleSellStock}
                 isLoadingPrices={isLoadingPrices}
                 onRefreshPrices={fetchPricesAndUpdatePortfolio}
                 remainingCash={portfolio.remainingCash}

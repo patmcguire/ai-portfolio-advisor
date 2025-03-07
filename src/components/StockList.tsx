@@ -16,13 +16,16 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import SellIcon from '@mui/icons-material/MonetizationOn';
 import { StockHolding } from '../types/investment';
 import { EditStockDialog } from './EditStockDialog';
+import { SellStockDialog } from './SellStockDialog';
 
 interface StockListProps {
   stocks: StockHolding[];
   onDelete: (id: string) => void;
   onEdit: (stock: StockHolding) => void;
+  onSell: (stockId: string, sharesSold: number, salePricePerShare: number, dateSold: Date) => void;
   isLoadingPrices: boolean;
   onRefreshPrices: () => void;
   remainingCash: number;
@@ -32,11 +35,13 @@ const StockList: React.FC<StockListProps> = ({
   stocks,
   onDelete,
   onEdit,
+  onSell,
   isLoadingPrices,
   onRefreshPrices,
   remainingCash,
 }) => {
   const [editingStock, setEditingStock] = useState<StockHolding | null>(null);
+  const [sellingStock, setSellingStock] = useState<StockHolding | null>(null);
 
   const handleEditClick = (stock: StockHolding) => {
     setEditingStock(stock);
@@ -49,6 +54,14 @@ const StockList: React.FC<StockListProps> = ({
   const handleEditSave = (updatedStock: StockHolding) => {
     onEdit(updatedStock);
     handleEditClose();
+  };
+
+  const handleSellClick = (stock: StockHolding) => {
+    setSellingStock(stock);
+  };
+
+  const handleSellClose = () => {
+    setSellingStock(null);
   };
 
   const formatCurrency = (value: number) => {
@@ -160,6 +173,13 @@ const StockList: React.FC<StockListProps> = ({
                   </IconButton>
                   <IconButton
                     size="small"
+                    onClick={() => handleSellClick(stock)}
+                    color="success"
+                  >
+                    <SellIcon />
+                  </IconButton>
+                  <IconButton
+                    size="small"
                     onClick={() => onDelete(stock.id)}
                     color="error"
                   >
@@ -178,6 +198,13 @@ const StockList: React.FC<StockListProps> = ({
         remainingCash={remainingCash}
         onClose={handleEditClose}
         onSave={handleEditSave}
+      />
+
+      <SellStockDialog
+        open={!!sellingStock}
+        stock={sellingStock}
+        onClose={handleSellClose}
+        onSave={onSell}
       />
     </Box>
   );
