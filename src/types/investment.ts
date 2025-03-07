@@ -29,4 +29,5 @@ export interface PortfolioState {
   stocks: StockHolding[];
   totalPortfolioValue: number;
   totalUnrealizedGainLoss: number;
+  totalRealizedGainLoss: number;
 } 

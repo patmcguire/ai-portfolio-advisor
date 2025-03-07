@@ -30,12 +30,10 @@ export const StockPurchaseForm: React.FC<StockPurchaseFormProps> = ({
     e.preventDefault();
     const numericShares = parseFloat(shares);
     const numericPrice = parseFloat(pricePerShare);
-    const costBasis = numericShares * numericPrice;
 
     if (
       !isNaN(numericShares) &&
       !isNaN(numericPrice) &&
-      costBasis <= remainingCash &&
       ticker.trim() !== ''
     ) {
       onSubmit({
@@ -127,8 +125,7 @@ export const StockPurchaseForm: React.FC<StockPurchaseFormProps> = ({
             disabled={
               !ticker.trim() ||
               isNaN(parseFloat(shares)) ||
-              isNaN(parseFloat(pricePerShare)) ||
-              totalCost > remainingCash
+              isNaN(parseFloat(pricePerShare))
             }
           >
             Add Purchase

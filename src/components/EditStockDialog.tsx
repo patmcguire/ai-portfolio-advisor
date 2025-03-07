@@ -56,13 +56,9 @@ export const EditStockDialog: React.FC<EditStockDialogProps> = ({
     const numericPrice = parseFloat(pricePerShare);
     const costBasis = numericShares * numericPrice;
 
-    // Calculate the difference in cost to check against remaining cash
-    const costDifference = costBasis - stock.costBasis;
-
     if (
       !isNaN(numericShares) &&
       !isNaN(numericPrice) &&
-      costDifference <= remainingCash &&
       ticker.trim() !== ''
     ) {
       onSave({
@@ -162,8 +158,7 @@ export const EditStockDialog: React.FC<EditStockDialogProps> = ({
           disabled={
             !ticker.trim() ||
             isNaN(parseFloat(shares)) ||
-            isNaN(parseFloat(pricePerShare)) ||
-            costDifference > remainingCash
+            isNaN(parseFloat(pricePerShare))
           }
         >
           Save Changes

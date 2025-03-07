@@ -103,11 +103,14 @@ const App: React.FC = () => {
       unrealizedGainLoss: 0,
     };
 
-    setPortfolio(prev => ({
-      ...prev,
-      stocks: [...prev.stocks, newStock],
-      remainingCash: prev.remainingCash - newStock.costBasis,
-    }));
+    setPortfolio(prev => {
+      const newRemainingCash = Math.max(0, prev.remainingCash - newStock.costBasis);
+      return {
+        ...prev,
+        stocks: [...prev.stocks, newStock],
+        remainingCash: newRemainingCash,
+      };
+    });
   };
 
   const handleDeleteStock = (id: string) => {
@@ -130,6 +133,7 @@ const App: React.FC = () => {
 
       const oldStock = prev.stocks[stockIndex];
       const cashDifference = oldStock.costBasis - updatedStock.costBasis;
+      const newRemainingCash = Math.max(0, prev.remainingCash + cashDifference);
 
       const updatedStocks = [...prev.stocks];
       updatedStocks[stockIndex] = updatedStock;
@@ -137,7 +141,7 @@ const App: React.FC = () => {
       return {
         ...prev,
         stocks: updatedStocks,
-        remainingCash: prev.remainingCash + cashDifference,
+        remainingCash: newRemainingCash,
       };
     });
   };
@@ -145,12 +149,13 @@ const App: React.FC = () => {
   const handleSaveEdit = (updatedStock: StockHolding) => {
     setPortfolio((prev) => {
       const costDifference = updatedStock.costBasis - (editingStock?.costBasis || 0);
+      const newRemainingCash = Math.max(0, prev.remainingCash - costDifference);
       return {
         ...prev,
         stocks: prev.stocks.map((stock) =>
           stock.id === updatedStock.id ? updatedStock : stock
         ),
-        remainingCash: prev.remainingCash - costDifference,
+        remainingCash: newRemainingCash,
       };
     });
     setEditingStock(null);
@@ -163,6 +168,8 @@ const App: React.FC = () => {
 
       const stock = prev.stocks[stockIndex];
       const saleProceeds = sharesSold * salePricePerShare;
+      const costBasisPerShare = stock.costBasis / stock.shares;
+      const realizedGainLoss = (salePricePerShare - costBasisPerShare) * sharesSold;
       const remainingShares = stock.shares - sharesSold;
 
       let updatedStocks = [...prev.stocks];
@@ -179,16 +186,19 @@ const App: React.FC = () => {
         updatedStocks = updatedStocks.filter(s => s.id !== stockId);
       }
 
+      const newRemainingCash = prev.remainingCash + saleProceeds;
+
       return {
         ...prev,
         stocks: updatedStocks,
-        remainingCash: prev.remainingCash + saleProceeds,
+        remainingCash: newRemainingCash,
+        totalRealizedGainLoss: prev.totalRealizedGainLoss + realizedGainLoss,
       };
     });
   };
 
-  const handleRestorePortfolio = (data: PortfolioState) => {
-    setPortfolio(data);
+  const handleRestorePortfolio = (restoredPortfolio: PortfolioState) => {
+    setPortfolio(restoredPortfolio);
   };
 
   return (
