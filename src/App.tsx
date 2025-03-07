@@ -187,6 +187,10 @@ const App: React.FC = () => {
     });
   };
 
+  const handleRestorePortfolio = (data: PortfolioState) => {
+    setPortfolio(data);
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -217,6 +221,7 @@ const App: React.FC = () => {
                 stocks={portfolio.stocks}
                 initialCash={portfolio.initialCash}
                 remainingCash={portfolio.remainingCash}
+                onRestore={handleRestorePortfolio}
               />
             </>
           )}
