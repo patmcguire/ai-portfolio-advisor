@@ -8,6 +8,7 @@ import { StockPurchaseForm } from './components/StockPurchaseForm';
 import StockList from './components/StockList';
 import { PortfolioSummary } from './components/PortfolioSummary';
 import { EditStockDialog } from './components/EditStockDialog';
+import { PortfolioExport } from './components/PortfolioExport';
 import { PortfolioState, StockHolding } from './types/investment';
 import { savePortfolioData, loadPortfolioData } from './utils/storage';
 import { fetchStockPrices } from './services/stockPrices';
@@ -210,6 +211,11 @@ const App: React.FC = () => {
                 onSell={handleSellStock}
                 isLoadingPrices={isLoadingPrices}
                 onRefreshPrices={fetchPricesAndUpdatePortfolio}
+                remainingCash={portfolio.remainingCash}
+              />
+              <PortfolioExport
+                stocks={portfolio.stocks}
+                initialCash={portfolio.initialCash}
                 remainingCash={portfolio.remainingCash}
               />
             </>
