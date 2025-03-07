@@ -8,6 +8,7 @@ import { StockPurchaseForm } from './components/StockPurchaseForm';
 import StockList from './components/StockList';
 import { PortfolioSummary } from './components/PortfolioSummary';
 import { EditStockDialog } from './components/EditStockDialog';
+import { EditInitialCashDialog } from './components/EditInitialCashDialog';
 import { PortfolioExport } from './components/PortfolioExport';
 import { PortfolioState, StockHolding } from './types/investment';
 import { savePortfolioData, loadPortfolioData } from './utils/storage';
@@ -22,8 +23,10 @@ const App: React.FC = () => {
     totalPortfolioValue: 0,
     totalUnrealizedGainLoss: 0,
     totalRealizedGainLoss: 0,
+    totalPortfolioPerformance: 0,
   });
   const [editingStock, setEditingStock] = useState<StockHolding | null>(null);
+  const [isEditingInitialCash, setIsEditingInitialCash] = useState(false);
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
 
   useEffect(() => {
@@ -60,12 +63,15 @@ const App: React.FC = () => {
 
       const totalPortfolioValue = updatedStocks.reduce((sum, stock) => sum + stock.marketValue, 0);
       const totalUnrealizedGainLoss = updatedStocks.reduce((sum, stock) => sum + stock.unrealizedGainLoss, 0) / updatedStocks.length;
+      const totalValue = totalPortfolioValue + portfolio.remainingCash;
+      const totalPortfolioPerformance = ((totalValue - portfolio.initialCash) / portfolio.initialCash) * 100;
 
       setPortfolio(prev => ({
         ...prev,
         stocks: updatedStocks,
         totalPortfolioValue,
         totalUnrealizedGainLoss,
+        totalPortfolioPerformance,
       }));
     } catch (error) {
       console.error('Error updating stock prices:', error);
@@ -90,7 +96,21 @@ const App: React.FC = () => {
       ...prev,
       initialCash: amount,
       remainingCash: amount,
+      totalPortfolioPerformance: 0,
     }));
+  };
+
+  const handleEditInitialCash = (newValue: number) => {
+    setPortfolio(prev => {
+      const totalValue = prev.totalPortfolioValue + prev.remainingCash;
+      const totalPortfolioPerformance = ((totalValue - newValue) / newValue) * 100;
+      return {
+        ...prev,
+        initialCash: newValue,
+        totalPortfolioPerformance,
+      };
+    });
+    setIsEditingInitialCash(false);
   };
 
   const handleStockPurchase = (stock: Omit<StockHolding, 'id' | 'costBasis' | 'currentPrice' | 'marketValue' | 'unrealizedGainLoss'>) => {
@@ -216,6 +236,7 @@ const App: React.FC = () => {
             <>
               <PortfolioSummary
                 portfolio={portfolio}
+                onEditInitialCash={() => setIsEditingInitialCash(true)}
               />
               <StockPurchaseForm onSubmit={handleStockPurchase} remainingCash={portfolio.remainingCash} />
               <StockList
@@ -242,6 +263,13 @@ const App: React.FC = () => {
             remainingCash={portfolio.remainingCash}
             onClose={() => setEditingStock(null)}
             onSave={handleSaveEdit}
+          />
+
+          <EditInitialCashDialog
+            open={isEditingInitialCash}
+            currentValue={portfolio.initialCash}
+            onClose={() => setIsEditingInitialCash(false)}
+            onSave={handleEditInitialCash}
           />
         </Container>
       </LocalizationProvider>

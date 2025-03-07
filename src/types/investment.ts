@@ -30,4 +30,5 @@ export interface PortfolioState {
   totalPortfolioValue: number;
   totalUnrealizedGainLoss: number;
   totalRealizedGainLoss: number;
+  totalPortfolioPerformance: number;  // Percentage gain/loss against initial investment
 } 

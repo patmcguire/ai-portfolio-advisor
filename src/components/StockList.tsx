@@ -12,6 +12,7 @@ import {
   Box,
   CircularProgress,
   Tooltip,
+  Zoom,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
@@ -86,21 +87,27 @@ const StockList: React.FC<StockListProps> = ({
   };
 
   return (
-    <Box sx={{ mt: 4 }}>
+    <Box sx={{ mb: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6" component="h2">
-          Stock Holdings
-        </Typography>
+        <Typography variant="h6">Portfolio Holdings</Typography>
         <Tooltip title="Refresh Prices">
-          <IconButton 
-            onClick={onRefreshPrices} 
-            disabled={isLoadingPrices}
+          <IconButton
+            onClick={onRefreshPrices}
             color="primary"
+            disabled={isLoadingPrices}
+            sx={{
+              animation: isLoadingPrices ? 'spin 1s linear infinite' : 'none',
+              '@keyframes spin': {
+                '0%': { transform: 'rotate(0deg)' },
+                '100%': { transform: 'rotate(360deg)' },
+              },
+            }}
           >
             <RefreshIcon />
           </IconButton>
         </Tooltip>
       </Box>
+
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -111,80 +118,77 @@ const StockList: React.FC<StockListProps> = ({
               <TableCell align="right">Current Price</TableCell>
               <TableCell align="right">Market Value</TableCell>
               <TableCell align="right">Gain/Loss</TableCell>
-              <TableCell align="right">Purchase Date</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {stocks.map((stock) => (
-              <TableRow key={stock.id}>
-                <TableCell component="th" scope="row">
-                  {stock.ticker}
+              <TableRow
+                key={stock.id}
+                sx={{
+                  transition: 'background-color 0.2s',
+                  '&:hover': {
+                    backgroundColor: 'action.hover',
+                  },
+                }}
+              >
+                <TableCell>
+                  <Typography variant="subtitle2" color="primary">
+                    {stock.ticker}
+                  </Typography>
                 </TableCell>
                 <TableCell align="right">{stock.shares.toFixed(2)}</TableCell>
                 <TableCell align="right">{formatCurrency(stock.costBasis)}</TableCell>
                 <TableCell align="right">
                   {isLoadingPrices ? (
                     <CircularProgress size={20} />
-                  ) : stock.currentPrice ? (
-                    formatCurrency(stock.currentPrice)
                   ) : (
-                    '-'
+                    formatCurrency(stock.currentPrice || 0)
                   )}
                 </TableCell>
-                <TableCell align="right">
-                  {isLoadingPrices ? (
-                    <CircularProgress size={20} />
-                  ) : stock.marketValue ? (
-                    formatCurrency(stock.marketValue)
-                  ) : (
-                    '-'
-                  )}
-                </TableCell>
-                <TableCell 
+                <TableCell align="right">{formatCurrency(stock.marketValue || 0)}</TableCell>
+                <TableCell
                   align="right"
-                  sx={{
-                    color: getGainLossColor(stock.unrealizedGainLoss || 0),
-                  }}
+                  sx={{ color: getGainLossColor(stock.unrealizedGainLoss || 0) }}
                 >
-                  {isLoadingPrices ? (
-                    <CircularProgress size={20} />
-                  ) : stock.unrealizedGainLoss !== undefined ? (
-                    <>
-                      {formatCurrency(stock.unrealizedGainLoss)}
-                      <Typography component="span" variant="body2" sx={{ ml: 1 }}>
-                        ({formatPercentage((stock.unrealizedGainLoss / stock.costBasis) * 100)})
-                      </Typography>
-                    </>
-                  ) : (
-                    '-'
-                  )}
+                  {formatPercentage(stock.unrealizedGainLoss || 0)}
                 </TableCell>
                 <TableCell align="right">
-                  {stock.purchaseDate.toLocaleDateString()}
-                </TableCell>
-                <TableCell align="right">
-                  <IconButton
-                    size="small"
-                    onClick={() => handleEditClick(stock)}
-                    color="primary"
-                  >
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleSellClick(stock)}
-                    color="success"
-                  >
-                    <SellIcon />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={() => onDelete(stock.id)}
-                    color="error"
-                  >
-                    <DeleteIcon />
-                  </IconButton>
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                    <Zoom in>
+                      <Tooltip title="Edit">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleEditClick(stock)}
+                          color="primary"
+                        >
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </Zoom>
+                    <Zoom in style={{ transitionDelay: '50ms' }}>
+                      <Tooltip title="Sell">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleSellClick(stock)}
+                          color="success"
+                        >
+                          <SellIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </Zoom>
+                    <Zoom in style={{ transitionDelay: '100ms' }}>
+                      <Tooltip title="Delete">
+                        <IconButton
+                          size="small"
+                          onClick={() => onDelete(stock.id)}
+                          color="error"
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </Zoom>
+                  </Box>
                 </TableCell>
               </TableRow>
             ))}
