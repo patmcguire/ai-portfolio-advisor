@@ -12,7 +12,7 @@ import { EditInitialCashDialog } from './components/EditInitialCashDialog';
 import { PortfolioExport } from './components/PortfolioExport';
 import { PortfolioState, StockHolding } from './types/investment';
 import { savePortfolioData, loadPortfolioData } from './utils/storage';
-import { fetchStockPrices } from './services/stockPrices';
+import { fetchStockPrices } from './services/alphavantage';
 import theme from './theme';
 
 const App: React.FC = () => {
@@ -28,6 +28,7 @@ const App: React.FC = () => {
   const [editingStock, setEditingStock] = useState<StockHolding | null>(null);
   const [isEditingInitialCash, setIsEditingInitialCash] = useState(false);
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
+  const [lastPriceUpdate, setLastPriceUpdate] = useState<Record<string, number>>({});
 
   useEffect(() => {
     const savedData = loadPortfolioData();
@@ -40,38 +41,80 @@ const App: React.FC = () => {
     savePortfolioData(portfolio);
   }, [portfolio]);
 
-  // Function to fetch stock prices and update portfolio
-  const fetchPricesAndUpdatePortfolio = async () => {
-    if (portfolio.stocks.length === 0) return;
-    
+  // Fetch stock prices and update portfolio calculations
+  useEffect(() => {
+    const updatePrices = async () => {
+      if (!portfolio.stocks.length) return;
+
+      setIsLoadingPrices(true);
+      try {
+        const symbolsToUpdate = portfolio.stocks.map(stock => stock.ticker);
+        const prices = await fetchStockPrices(symbolsToUpdate);
+        
+        // Update portfolio with new prices
+        const updatedStocks = portfolio.stocks.map(stock => {
+          const currentPrice = prices[stock.ticker] || stock.currentPrice;
+          const marketValue = stock.shares * currentPrice;
+          const unrealizedGainLoss = marketValue - stock.costBasis;
+          
+          return {
+            ...stock,
+            currentPrice,
+            marketValue,
+            unrealizedGainLoss
+          };
+        });
+
+        const totalPortfolioValue = updatedStocks.reduce((sum, stock) => sum + stock.marketValue, 0);
+        const totalUnrealizedGainLoss = updatedStocks.reduce((sum, stock) => sum + stock.unrealizedGainLoss, 0);
+        
+        setPortfolio(prev => ({
+          ...prev,
+          stocks: updatedStocks,
+          totalPortfolioValue,
+          totalUnrealizedGainLoss
+        }));
+      } catch (error) {
+        console.error('Error updating stock prices:', error);
+      } finally {
+        setIsLoadingPrices(false);
+      }
+    };
+
+    // Initial price update only
+    updatePrices();
+  }, [portfolio.stocks.length]); // Only run when number of stocks changes
+
+  const handleRefreshPrices = async () => {
+    if (!portfolio.stocks.length) return;
+
     setIsLoadingPrices(true);
     try {
-      const prices = await fetchStockPrices(portfolio.stocks.map(stock => stock.ticker));
+      const symbolsToUpdate = portfolio.stocks.map(stock => stock.ticker);
+      const prices = await fetchStockPrices(symbolsToUpdate);
       
+      // Update portfolio with new prices
       const updatedStocks = portfolio.stocks.map(stock => {
-        const currentPrice = prices.get(stock.ticker) || stock.currentPrice || 0;
-        const marketValue = currentPrice * stock.shares;
-        const unrealizedGainLoss = ((currentPrice - stock.pricePerShare) / stock.pricePerShare) * 100;
+        const currentPrice = prices[stock.ticker] || stock.currentPrice;
+        const marketValue = stock.shares * currentPrice;
+        const unrealizedGainLoss = marketValue - stock.costBasis;
         
         return {
           ...stock,
           currentPrice,
           marketValue,
-          unrealizedGainLoss,
+          unrealizedGainLoss
         };
       });
 
       const totalPortfolioValue = updatedStocks.reduce((sum, stock) => sum + stock.marketValue, 0);
-      const totalUnrealizedGainLoss = updatedStocks.reduce((sum, stock) => sum + stock.unrealizedGainLoss, 0) / updatedStocks.length;
-      const totalValue = totalPortfolioValue + portfolio.remainingCash;
-      const totalPortfolioPerformance = ((totalValue - portfolio.initialCash) / portfolio.initialCash) * 100;
-
+      const totalUnrealizedGainLoss = updatedStocks.reduce((sum, stock) => sum + stock.unrealizedGainLoss, 0);
+      
       setPortfolio(prev => ({
         ...prev,
         stocks: updatedStocks,
         totalPortfolioValue,
-        totalUnrealizedGainLoss,
-        totalPortfolioPerformance,
+        totalUnrealizedGainLoss
       }));
     } catch (error) {
       console.error('Error updating stock prices:', error);
@@ -79,17 +122,6 @@ const App: React.FC = () => {
       setIsLoadingPrices(false);
     }
   };
-
-  // Initial price fetch
-  useEffect(() => {
-    fetchPricesAndUpdatePortfolio();
-  }, [portfolio.stocks.length]); // Only run when stocks are added or removed
-
-  // Auto-refresh prices every 5 minutes
-  useEffect(() => {
-    const interval = setInterval(fetchPricesAndUpdatePortfolio, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   const handleInitialCashSubmit = (amount: number) => {
     setPortfolio(prev => ({
@@ -245,7 +277,7 @@ const App: React.FC = () => {
                 onEdit={handleEditStock}
                 onSell={handleSellStock}
                 isLoadingPrices={isLoadingPrices}
-                onRefreshPrices={fetchPricesAndUpdatePortfolio}
+                onRefreshPrices={handleRefreshPrices}
                 remainingCash={portfolio.remainingCash}
               />
               <PortfolioExport
